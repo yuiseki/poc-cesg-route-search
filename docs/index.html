@@ -204,15 +204,22 @@
       document.getElementById('stat-api').textContent = '…';
 
       try {
-        const res = await fetch(ROUTE_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            costing: 'auto',
-            start: [start.lng, start.lat],
-            end:   [end.lng,   end.lat],
-          }),
-        });
+        // Retry up to 30 times with 10s delay while Actor is initializing (503)
+        let res;
+        for (let attempt = 0; attempt < 30; attempt++) {
+          res = await fetch(ROUTE_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              costing: 'auto',
+              start: [start.lng, start.lat],
+              end:   [end.lng,   end.lat],
+            }),
+          });
+          if (res.status !== 503) break;
+          setStatus(`Initializing… (${attempt + 1}/30, retry in 10s)`, 'loading');
+          await new Promise(r => setTimeout(r, 10000));
+        }
 
         if (!res.ok) {
           const text = await res.text();
