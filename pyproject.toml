@@ -1,0 +1,16 @@
+[project]
+name = "cesg-route-search"
+version = "0.1.0"
+description = "Cloud-Native Geospatial route search PoC using precomputed Valhalla routing graph tiles"
+requires-python = ">=3.12"
+dependencies = [
+    "pyvalhalla>=3.7.0",
+    "requests>=2.32",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cesg_route_search"]

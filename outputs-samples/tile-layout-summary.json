@@ -1,0 +1,42 @@
+{
+  "tiles_dir": "/everything/src/github.com/yuiseki/osm-planet-in-da-house/data/valhalla/valhalla_tiles",
+  "sampled": true,
+  "sample_limit": 5000,
+  "total_files": 5000,
+  "total_size_bytes": 5829150624,
+  "total_size_mb": 5559.11,
+  "min_size_bytes": 464,
+  "max_size_bytes": 83925232,
+  "median_size_bytes": 125936.0,
+  "level_summary": {
+    "2": {
+      "file_count": 5000,
+      "total_size_bytes": 5829150624,
+      "min_size_bytes": 464,
+      "max_size_bytes": 83925232,
+      "median_size_bytes": 125936.0
+    }
+  },
+  "sample_paths": [
+    "0/000/529.gph",
+    "0/000/530.gph",
+    "0/000/747.gph",
+    "0/000/748.gph",
+    "0/000/836.gph",
+    "0/000/837.gph",
+    "0/000/838.gph",
+    "0/000/840.gph",
+    "0/000/873.gph",
+    "0/000/926.gph",
+    "0/000/927.gph",
+    "0/000/928.gph",
+    "0/000/986.gph",
+    "0/000/987.gph",
+    "0/001/016.gph",
+    "0/001/017.gph",
+    "0/001/018.gph",
+    "0/001/071.gph",
+    "0/001/072.gph",
+    "0/001/076.gph"
+  ]
+}

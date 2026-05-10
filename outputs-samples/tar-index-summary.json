@@ -1,0 +1,19 @@
+{
+  "entry_count": 1000,
+  "file_entry_count": 1000,
+  "min_size_bytes": 464,
+  "max_size_bytes": 83925232,
+  "total_size_bytes": 4148091992,
+  "sample_names": [
+    "index.bin",
+    "0/000/529.gph",
+    "0/000/530.gph",
+    "0/000/747.gph",
+    "0/000/748.gph",
+    "0/000/836.gph",
+    "0/000/837.gph",
+    "0/000/838.gph",
+    "0/000/840.gph",
+    "0/000/873.gph"
+  ]
+}
