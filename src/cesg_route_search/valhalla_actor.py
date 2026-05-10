@@ -77,53 +77,47 @@ def _patch_config_dict(cfg: dict, local_dir: str) -> dict:
 
 
 def _download_file(url: str, dest: Path) -> None:
-    """Download a file from url to dest, streaming with progress log and resume support."""
-    import requests
+    """Download a file from url to dest using curl with resume support."""
+    import subprocess
 
     logger.info("Downloading %s → %s", url, dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
-
-    chunk_size = 4 * 1024 * 1024  # 4 MB chunks
-    max_retries = 10
-    downloaded = 0
+    max_retries = 20
 
     for attempt in range(max_retries):
-        headers = {}
-        mode = "wb"
-        if dest.exists() and downloaded == 0:
-            downloaded = dest.stat().st_size
-        if downloaded > 0:
-            headers["Range"] = f"bytes={downloaded}-"
-            mode = "ab"
-            logger.info("Resuming from byte %d (%.1f MB)", downloaded, downloaded / 1024 / 1024)
-
-        try:
-            with requests.get(url, headers=headers, stream=True, timeout=(30, 120)) as r:
-                if r.status_code == 416:
-                    # Range not satisfiable → already complete
-                    logger.info("Range request returned 416 — file already complete")
-                    break
-                r.raise_for_status()
-                with open(dest, mode) as f:
-                    for chunk in r.iter_content(chunk_size=chunk_size):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-            # If we get here, download completed
+        # curl -C - resumes from existing file size; -L follows redirects
+        # --retry-connrefused --retry 3 for transient failures
+        # --speed-limit 1 --speed-time 30: abort if < 1 byte/s for 30s
+        cmd = [
+            "curl", "-L", "-C", "-",
+            "--speed-limit", "1024",  # min 1 KB/s
+            "--speed-time", "30",     # abort if under limit for 30s
+            "--max-time", "600",
+            "--retry", "0",           # we handle retry ourselves
+            "-o", str(dest),
+            url,
+        ]
+        logger.info("Download attempt %d/%d via curl", attempt + 1, max_retries)
+        result = subprocess.run(cmd, timeout=660)
+        downloaded = dest.stat().st_size if dest.exists() else 0
+        logger.info("curl exit=%d downloaded=%.1f MB", result.returncode, downloaded / 1024 / 1024)
+        if result.returncode == 0:
             break
-        except Exception as e:
-            logger.warning(
-                "Download attempt %d/%d failed at %.1f MB: %s",
-                attempt + 1, max_retries, downloaded / 1024 / 1024, e,
-            )
+        elif result.returncode == 33:
+            # curl exit 33: server does not support ranges → file may be complete
+            logger.info("curl exit 33 (range not supported) — assuming complete")
+            break
+        else:
+            logger.warning("curl failed with exit %d, retrying...", result.returncode)
             if attempt + 1 >= max_retries:
-                raise
+                raise RuntimeError(f"Download failed after {max_retries} attempts, exit={result.returncode}")
             time.sleep(min(5 * (attempt + 1), 30))
 
     elapsed = time.monotonic() - t0
+    downloaded = dest.stat().st_size if dest.exists() else 0
     logger.info(
-        "Downloaded %d bytes in %.1fs (%.1f MB/s)",
+        "Download complete: %d bytes in %.1fs (%.1f MB/s)",
         downloaded,
         elapsed,
         downloaded / 1024 / 1024 / max(elapsed, 0.001),
