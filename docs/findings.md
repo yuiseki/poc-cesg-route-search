@@ -217,6 +217,23 @@ Routing against regional tiles is ~2x faster than the planet-scale tiles (249 ms
 
 ---
 
+## 11. GitHub Pages + Knative route demo
+
+_Deployed: 2026-05-10_
+
+- Knative endpoint: https://poc-cesg-route-search.yuiseki.com
+- Frontend: https://yuiseki.github.io/poc-cesg-route-search/
+- Default route: Shibuya Station → Shinjuku Station
+- Background map: https://tile.yuiseki.net/styles/osm-fiord/style.json
+- Interaction: draggable start/end markers trigger POST /route
+- Runtime mode: pyvalhalla Actor inside FastAPI, tile_extract mode
+- Artifact: Tokyo valhalla_tiles.tar, 819 MB
+
+> Note: This demo does not yet implement true remote Range Request routing.
+> The 819 MB valhalla_tiles.tar is currently used as a local tile_extract artifact inside the container/runtime.
+
+---
+
 ## 9. Next experiments
 
 1. **Full tar manifest**: Build the complete planet manifest (not 1000-entry sample)

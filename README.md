@@ -2,6 +2,56 @@
 
 Proof-of-concept for Cloud-Native Geospatial (CESG) route search using precomputed Valhalla routing graph tiles.
 
+## Live demo
+
+- **Knative endpoint:** https://poc-cesg-route-search.yuiseki.com
+- **GitHub Pages frontend:** https://yuiseki.github.io/poc-cesg-route-search/
+
+The frontend shows a MapLibre GL JS map with draggable start (green) and end (red) markers.
+Dragging either marker triggers a POST /route request and renders the route as a blue line.
+Default route: Shibuya Station → Shinjuku Station.
+
+## Knative deploy
+
+```bash
+# Apply ksvc (downloads valhalla_tiles.tar from object storage on cold start)
+kubectl apply -f k8s/ksvc.yaml
+
+# Check status
+kubectl get ksvc -n knative-pool poc-cesg-route-search
+kubectl get pods -n knative-pool | grep route-search
+```
+
+Cold start downloads 819 MB tar from `https://z.yuiseki.net/static/cesg/tokyo/valhalla_tiles.tar`.
+`timeoutSeconds: 300` is set to accommodate this.
+
+## API usage
+
+```bash
+# Liveness probe
+curl -sS https://poc-cesg-route-search.yuiseki.com/healthz
+
+# Readiness probe
+curl -sS https://poc-cesg-route-search.yuiseki.com/readyz
+
+# Route: Shibuya Station → Shinjuku Station
+curl -sS https://poc-cesg-route-search.yuiseki.com/route \
+  -H 'Content-Type: application/json' \
+  -d '{"costing": "auto", "start": [139.701238, 35.658034], "end": [139.700464, 35.689487]}' \
+  | python3 -m json.tool
+```
+
+## GitHub Pages
+
+The `docs/index.html` frontend is served via GitHub Pages from the `main` branch `/docs` directory.
+
+Features:
+- Background map: `https://tile.yuiseki.net/styles/osm-fiord/style.json`
+- Two draggable markers: green (start), red (end)
+- Route rendered as blue LineString (width 4, opacity 0.8)
+- Info panel: Distance, Time, API latency, Status
+- API URL configurable via `?api=` query parameter
+
 ## Purpose
 
 This PoC investigates whether a precomputed Valhalla routing graph can be:

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CESG Route Search</title>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #111;
+      color: #eee;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+    #info-panel {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      background: rgba(20, 20, 30, 0.92);
+      border: 1px solid #334;
+      border-radius: 8px;
+      padding: 12px 16px;
+      min-width: 240px;
+      max-width: 300px;
+      color: #eee;
+      font-size: 13px;
+      line-height: 1.6;
+      backdrop-filter: blur(4px);
+    }
+    #info-panel h1 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #88aaff;
+      margin-bottom: 8px;
+      white-space: nowrap;
+    }
+    .info-label {
+      font-size: 11px;
+      color: #778;
+      margin-bottom: 2px;
+    }
+    .info-value {
+      font-size: 12px;
+      color: #cce;
+    }
+    .info-sep {
+      border: none;
+      border-top: 1px solid #334;
+      margin: 8px 0;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #778;
+    }
+    .stat-value {
+      font-size: 12px;
+      color: #aef;
+      font-variant-numeric: tabular-nums;
+    }
+    #status-text {
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    #status-text.ok { color: #6a6; }
+    #status-text.error { color: #f66; }
+    #status-text.loading { color: #aa8; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="info-panel">
+    <h1>poc-cesg-route-search</h1>
+    <div class="info-label">Start</div>
+    <div class="info-value">Draggable green marker</div>
+    <div class="info-label" style="margin-top:4px;">End</div>
+    <div class="info-value">Draggable red marker</div>
+    <hr class="info-sep" />
+    <div class="stat-row">
+      <span class="stat-label">Distance</span>
+      <span class="stat-value" id="stat-distance">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Time</span>
+      <span class="stat-value" id="stat-time">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">API</span>
+      <span class="stat-value" id="stat-api">—</span>
+    </div>
+    <hr class="info-sep" />
+    <div id="status-text" class="loading">Initializing…</div>
+  </div>
+
+  <script>
+    const ROUTE_API_URL = new URLSearchParams(location.search).get('api') || "https://poc-cesg-route-search.yuiseki.com/route";
+
+    const DEFAULT_START = [139.701238, 35.658034]; // Shibuya Station
+    const DEFAULT_END   = [139.700464, 35.689487]; // Shinjuku Station
+
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://tile.yuiseki.net/styles/osm-fiord/style.json',
+      center: [139.7009, 35.6737],
+      zoom: 13,
+    });
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    // --- Markers ---
+    function makeMarkerEl(color) {
+      const el = document.createElement('div');
+      el.style.cssText = `
+        width: 18px; height: 18px;
+        background: ${color};
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+        cursor: grab;
+      `;
+      return el;
+    }
+
+    const startMarker = new maplibregl.Marker({ element: makeMarkerEl('#22cc44'), draggable: true })
+      .setLngLat(DEFAULT_START)
+      .addTo(map);
+
+    const endMarker = new maplibregl.Marker({ element: makeMarkerEl('#ee3333'), draggable: true })
+      .setLngLat(DEFAULT_END)
+      .addTo(map);
+
+    startMarker.on('dragend', () => callRoute());
+    endMarker.on('dragend', () => callRoute());
+
+    // --- Route layer ---
+    map.on('load', () => {
+      map.addSource('route', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+
+      map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': '#4488ff',
+          'line-width': 4,
+          'line-opacity': 0.8,
+        },
+      });
+
+      callRoute();
+    });
+
+    // --- Status helpers ---
+    function setStatus(msg, cls) {
+      const el = document.getElementById('status-text');
+      el.textContent = msg;
+      el.className = cls;
+    }
+
+    function fmtDistance(m) {
+      if (m == null) return '—';
+      return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : m.toFixed(0) + ' m';
+    }
+
+    function fmtTime(s) {
+      if (s == null) return '—';
+      const m = Math.floor(s / 60);
+      const sec = Math.round(s % 60);
+      if (m === 0) return sec + ' sec';
+      return m + ' min ' + sec + ' sec';
+    }
+
+    function fmtApi(ms) {
+      if (ms == null) return '—';
+      return ms.toFixed(0) + ' ms';
+    }
+
+    // --- Route call ---
+    async function callRoute() {
+      const start = startMarker.getLngLat();
+      const end   = endMarker.getLngLat();
+
+      setStatus('Routing…', 'loading');
+      document.getElementById('stat-distance').textContent = '…';
+      document.getElementById('stat-time').textContent = '…';
+      document.getElementById('stat-api').textContent = '…';
+
+      try {
+        const res = await fetch(ROUTE_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            costing: 'auto',
+            start: [start.lng, start.lat],
+            end:   [end.lng,   end.lat],
+          }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`HTTP ${res.status}: ${text}`);
+        }
+
+        const data = await res.json();
+
+        // Update stats
+        document.getElementById('stat-distance').textContent = fmtDistance(data.distance_m);
+        document.getElementById('stat-time').textContent     = fmtTime(data.time_s);
+        document.getElementById('stat-api').textContent      = fmtApi(data.runtime_ms);
+
+        // Update route layer
+        const geojson = {
+          type: 'FeatureCollection',
+          features: [{ type: 'Feature', geometry: data.geometry, properties: {} }],
+        };
+        map.getSource('route').setData(geojson);
+
+        setStatus('OK', 'ok');
+      } catch (err) {
+        setStatus('Error: ' + err.message, 'error');
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>

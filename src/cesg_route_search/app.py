@@ -6,6 +6,7 @@ import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .geojson import decode_polyline6
@@ -30,6 +31,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="poc-cesg-route-search", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # PoC only
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 class RouteRequest(BaseModel):
