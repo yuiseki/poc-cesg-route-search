@@ -1,0 +1,46 @@
+{
+  "tiles_dir": "/Workspaces/repos/_yuiseki/_poc/poc-cesg-route-search/data/tokyo/valhalla/valhalla_tiles",
+  "total_files_found": 272,
+  "files_analyzed": 272,
+  "total_size_bytes": 857738264,
+  "total_size_mb": 818.0,
+  "min_size_bytes": 304,
+  "max_size_bytes": 81764456,
+  "median_size_bytes": 392,
+  "levels": {
+    "0": {
+      "count": 8,
+      "total_bytes": 43603912,
+      "min_bytes": 680,
+      "max_bytes": 32496848,
+      "median_bytes": 1508
+    },
+    "1": {
+      "count": 14,
+      "total_bytes": 103237848,
+      "min_bytes": 8480,
+      "max_bytes": 52282176,
+      "median_bytes": 183044
+    },
+    "2": {
+      "count": 250,
+      "total_bytes": 710896504,
+      "min_bytes": 304,
+      "max_bytes": 81764456,
+      "median_bytes": 392
+    }
+  },
+  "sample_paths": [
+    "0/002/690.gph",
+    "0/002/777.gph",
+    "0/002/779.gph",
+    "0/002/868.gph",
+    "0/002/869.gph",
+    "0/002/870.gph",
+    "0/002/960.gph",
+    "0/003/050.gph",
+    "1/041/361.gph",
+    "1/042/082.gph"
+  ],
+  "generated_at": "2026-05-10T07:56:50.409944+00:00"
+}

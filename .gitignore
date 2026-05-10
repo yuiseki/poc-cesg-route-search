@@ -8,3 +8,8 @@ data/
 *.sqlite
 valhalla_tiles/
 *.pyc
+data/tokyo/input/*.osm.pbf
+data/tokyo/valhalla/*
+!data/tokyo/.gitkeep
+!data/tokyo/input/.gitkeep
+!data/tokyo/valhalla/.gitkeep

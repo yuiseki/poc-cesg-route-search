@@ -112,8 +112,52 @@ result = actor.route({
 print(result["trip"]["summary"])
 ```
 
+## Tokyo Valhalla tile reproduction
+
+Reproduce a Tokyo routing graph from the Kanto PBF without touching the planet-scale tiles.
+
+### Prerequisites
+
+- Docker installed and running
+- Kanto PBF at `/data/www/html/static/openstreetmap/region/kanto-260423.osm.pbf` (443 MB)
+- pyvalhalla 3.7.0 in `.venv/`
+
+### Pipeline
+
+```bash
+# Step 1: Prepare input data (symlink Kanto PBF)
+bash scripts/100_prepare_tokyo_data.sh
+
+# Step 2: Build tiles with Docker (15–45 minutes)
+bash scripts/110_build_tokyo_valhalla_tiles.sh
+
+# Step 3: Patch valhalla.json for host-side use
+.venv/bin/python scripts/120_patch_tokyo_valhalla_config.py
+
+# Step 4: Run a route: Tokyo Station → Shinjuku
+.venv/bin/python scripts/130_route_tokyo_one.py
+
+# Step 5: Inspect tile layout
+.venv/bin/python scripts/140_inspect_tokyo_tiles.py
+```
+
+Outputs land in `outputs/tokyo-*`. See `docs/tokyo-valhalla-pipeline.md` for details.
+
+### Local server (optional)
+
+```bash
+.venv/bin/pip install -e ".[server]"
+.venv/bin/python scripts/200_run_local_server.py
+# Then: curl -X POST http://localhost:8000/route -H 'Content-Type: application/json' \
+#   -d '{"costing":"auto","start":[139.767125,35.681236],"end":[139.700464,35.689487]}'
+```
+
+See `docs/knative-next-step.md` for the Knative deployment design.
+
+---
+
 ## Notes
 
 - Do NOT copy `valhalla_tiles/`, `valhalla_tiles.tar`, or `planet-latest.osm.pbf`
-- The original `valhalla.json` uses Docker `/custom_files/` paths — always use the runtime-patched `outputs/valhalla_local.json`
+- The original `valhalla.json` uses Docker `/custom_files/` paths — always use the runtime-patched `outputs/valhalla_local.json` (planet) or `data/tokyo/valhalla/valhalla.host.json` (Tokyo)
 - Use `.venv/bin/python` (not system Python) for all script runs

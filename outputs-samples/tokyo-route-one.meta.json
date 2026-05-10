@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "costing": "auto",
+  "start": [
+    139.767125,
+    35.681236
+  ],
+  "end": [
+    139.700464,
+    35.689487
+  ],
+  "distance_m": 7618.0,
+  "time_s": 878.444,
+  "runtime_ms": 249.2,
+  "valhalla_config": "/Workspaces/repos/_yuiseki/_poc/poc-cesg-route-search/data/tokyo/valhalla/valhalla.host.json",
+  "tiles_dir": "/Workspaces/repos/_yuiseki/_poc/poc-cesg-route-search/data/tokyo/valhalla/valhalla_tiles",
+  "generated_at": "2026-05-10T07:56:47.846809+00:00"
+}

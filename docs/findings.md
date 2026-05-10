@@ -157,7 +157,67 @@ precomputed graph. The 469 ms runtime includes tile loading (cold cache).
 
 ---
 
-## 7. Next experiments
+## 8. Tokyo Valhalla tile reproduction
+
+_Run date: 2026-05-10_
+
+### Build pipeline
+
+| Step | Script | Result |
+|---|---|---|
+| Prepare data | `100_prepare_tokyo_data.sh` | Symlink created to Kanto PBF (443 MB) |
+| Build tiles | `110_build_tokyo_valhalla_tiles.sh` | Docker build completed in ~4 minutes |
+| Patch config | `120_patch_tokyo_valhalla_config.py` | 8 `/custom_files/` refs patched; 2 missing pyvalhalla fields added |
+| Route search | `130_route_tokyo_one.py` | Tokyo Station → Shinjuku: 7,618 m / 878 s / 249 ms |
+| Tile survey | `140_inspect_tokyo_tiles.py` | 272 tiles, 818 MB total |
+
+### Docker build details
+
+- Image: `ghcr.io/valhalla/valhalla-scripted:latest`
+- Input: `kanto-260423.osm.pbf` (443 MB), Kanto region, dated 2026-04-23
+- Output: `valhalla_tiles/` (272 tiles), `admins.sqlite` (7.9 MB), `timezones.sqlite` (115 MB), `valhalla_tiles.tar` (819 MB)
+- Build time: ~4 minutes
+- Key fix: PBF must be bind-mounted directly into `/custom_files/` (symlinks across volume boundaries don't resolve inside Docker)
+
+### Config patching (script 120)
+
+The Docker image produces `valhalla.json` with all paths as `/custom_files/...`.
+pyvalhalla 3.7.0 also requires `loki.service_defaults.mvt_min_zoom_road_class` and
+`mvt_cache_min_zoom` which the newer Docker image omits. The patch script adds both.
+
+### Tile layout
+
+| Metric | Value |
+|---|---|
+| Total tiles | 272 |
+| Total size | 818 MB |
+| Level 0 tiles | 8 (highway-level graph) |
+| Level 1 tiles | 14 (arterial roads) |
+| Level 2 tiles | 250 (local streets) |
+| Level 2 median size | 392 bytes (sparse Kanto coverage) |
+| Level 1 median size | 183,044 bytes |
+
+The Kanto region generates only 272 tiles vs. ~14,000+ for the planet at levels 0+1
+alone. This is ideal for container embedding or object-storage serving.
+
+### Route search results (Tokyo tiles)
+
+| Field | Value |
+|---|---|
+| Origin | Tokyo Station (139.767125, 35.681236) |
+| Destination | Shinjuku (139.700464, 35.689487) |
+| Costing | auto |
+| Distance | **7,618 m** |
+| Travel time | **878 s** (~14.6 min) |
+| Runtime | **249 ms** (cold, tile_dir mode) |
+| Success | YES |
+
+Routing against regional tiles is ~2x faster than the planet-scale tiles (249 ms vs.
+469 ms cold start) due to the smaller tile index to load.
+
+---
+
+## 9. Next experiments
 
 1. **Full tar manifest**: Build the complete planet manifest (not 1000-entry sample)
    and measure actual manifest file size vs. estimate.
