@@ -323,3 +323,12 @@ remove this constraint (see `docs/findings.md` section 4).
 | `/healthz` | GET | Liveness probe |
 | `/readyz` | GET | Readiness probe (actor_initialized, mode) |
 | `/route` | POST | Route search (start, end, costing) |
+
+---
+
+## Conclusion
+
+This PoC demonstrates that precomputed routing graph artifacts can be deployed as a
+Cloud-Edge Symmetric Geospatial service: statically distributed, initialized in a
+Knative runtime, queried through a lightweight HTTP API, and visualized from a static
+GitHub Pages frontend.
