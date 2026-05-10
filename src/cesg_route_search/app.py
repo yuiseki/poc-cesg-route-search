@@ -2,6 +2,7 @@
 
 import json
 import logging
+import threading
 import time
 from contextlib import asynccontextmanager
 
@@ -19,14 +20,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Warm up Actor on startup
+def _warm_up():
+    """Initialize Valhalla Actor in a background thread so uvicorn starts immediately."""
     try:
         get_actor()
-        logger.info("Valhalla Actor initialized at startup")
+        logger.info("Valhalla Actor initialized (background)")
     except Exception as e:
-        logger.error("Actor init failed at startup: %s", e)
+        logger.error("Actor init failed (background): %s", e)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start Actor initialization in background — do NOT block uvicorn startup.
+    # Knative readiness probes hit /healthz (TCP or HTTP) immediately after the
+    # port opens. Blocking here would cause "Initial scale was never achieved".
+    t = threading.Thread(target=_warm_up, daemon=True)
+    t.start()
     yield
 
 
@@ -65,6 +74,9 @@ def readyz():
 
 @app.post("/route")
 def route(req: RouteRequest):
+    from .valhalla_actor import _actor as _current_actor
+    if _current_actor is None:
+        raise HTTPException(status_code=503, detail="Actor not yet initialized — retry in a moment")
     actor = get_actor()
     valhalla_req = {
         "locations": [

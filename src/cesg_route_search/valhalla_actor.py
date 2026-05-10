@@ -77,20 +77,50 @@ def _patch_config_dict(cfg: dict, local_dir: str) -> dict:
 
 
 def _download_file(url: str, dest: Path) -> None:
-    """Download a file from url to dest, streaming with progress log."""
-    import httpx
+    """Download a file from url to dest, streaming with progress log and resume support."""
+    import requests
 
     logger.info("Downloading %s → %s", url, dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     t0 = time.monotonic()
-    with httpx.stream("GET", url, follow_redirects=True, timeout=600) as r:
-        r.raise_for_status()
-        total = int(r.headers.get("content-length", 0))
-        downloaded = 0
-        with open(dest, "wb") as f:
-            for chunk in r.iter_bytes(chunk_size=1024 * 1024):
-                f.write(chunk)
-                downloaded += len(chunk)
+
+    chunk_size = 4 * 1024 * 1024  # 4 MB chunks
+    max_retries = 10
+    downloaded = 0
+
+    for attempt in range(max_retries):
+        headers = {}
+        mode = "wb"
+        if dest.exists() and downloaded == 0:
+            downloaded = dest.stat().st_size
+        if downloaded > 0:
+            headers["Range"] = f"bytes={downloaded}-"
+            mode = "ab"
+            logger.info("Resuming from byte %d (%.1f MB)", downloaded, downloaded / 1024 / 1024)
+
+        try:
+            with requests.get(url, headers=headers, stream=True, timeout=(30, 120)) as r:
+                if r.status_code == 416:
+                    # Range not satisfiable → already complete
+                    logger.info("Range request returned 416 — file already complete")
+                    break
+                r.raise_for_status()
+                with open(dest, mode) as f:
+                    for chunk in r.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+            # If we get here, download completed
+            break
+        except Exception as e:
+            logger.warning(
+                "Download attempt %d/%d failed at %.1f MB: %s",
+                attempt + 1, max_retries, downloaded / 1024 / 1024, e,
+            )
+            if attempt + 1 >= max_retries:
+                raise
+            time.sleep(min(5 * (attempt + 1), 30))
+
     elapsed = time.monotonic() - t0
     logger.info(
         "Downloaded %d bytes in %.1fs (%.1f MB/s)",

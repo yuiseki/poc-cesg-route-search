@@ -7,10 +7,10 @@ spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/min-scale: "0"
+        autoscaling.knative.dev/min-scale: "1"
         autoscaling.knative.dev/max-scale: "3"
         autoscaling.knative.dev/target: "3"
-        autoscaling.knative.dev/scale-down-delay: "60s"
+        autoscaling.knative.dev/scale-down-delay: "300s"
     spec:
       containerConcurrency: 3
       timeoutSeconds: 300
