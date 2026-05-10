@@ -236,3 +236,73 @@ Routing against regional tiles is ~2x faster than the planet-scale tiles (249 ms
 
 6. **Benchmark**: Run `050_benchmark_routes.py` to measure latency distribution across
    5 Tokyo-area routes.
+
+---
+
+## 10. FastAPI / Knative Route Search Service
+
+_Run date: 2026-05-10_
+
+### pyvalhalla works inside FastAPI
+
+pyvalhalla 3.7.0 integrates cleanly with FastAPI. The `valhalla.Actor` is initialized
+once at startup (via `lifespan` context) and reused across all requests. No separate
+Valhalla HTTP server process is needed — the Python binding calls the routing engine
+directly in-process.
+
+### tile_extract mode confirmed working
+
+The 819 MB Tokyo tar (`valhalla_tiles.tar`) loads successfully in `tile_extract` mode
+via mmap. Actor initialization takes ~7 ms. First route call: ~97 ms (cold). Subsequent
+calls would be faster as tiles are cached in memory.
+
+### Route search results (FastAPI, tile_extract mode)
+
+| Field | Value |
+|---|---|
+| Origin | Tokyo Station (139.767125, 35.681236) |
+| Destination | Shinjuku (139.700464, 35.689487) |
+| Costing | auto |
+| Distance | **7,618.0 m** |
+| Travel time | **878.4 s** (~14.6 min) |
+| Runtime | **97.3 ms** (first request, tile_extract mode) |
+| Artifact mode | tile_extract |
+| Success | YES |
+
+### Artifact size comparison
+
+| Service | Artifact | Size |
+|---|---|---|
+| poc-cesg-poi-search | DuckDB file | ~50 MB |
+| poc-cesg-route-search | Valhalla tar (Kanto) | 819 MB |
+| poc-cesg-route-search | Valhalla tar (planet) | ~90 GB |
+
+The route search artifact is ~16× larger than the POI search DuckDB. This has direct
+implications for cold start time on Knative (see `docs/knative-deploy.md`).
+
+### Cold start implications
+
+At `tile_extract` mode cold start on Knative:
+- Download `valhalla.json` config: ~1 KB, negligible
+- Download `valhalla_tiles.tar` (819 MB): ~30–120s at 10–30 MB/s
+- Actor init: ~7 ms
+- Total: ~30–120s depending on network throughput
+
+`timeoutSeconds: 300` is set in the ksvc to accommodate this. The next step is a
+per-tile Range Request fetcher to reduce cold start data to ~2.8 MB manifest +
+query-time tile fetches (~0.6–2.5 MB per route).
+
+### Valhalla still needs local file access
+
+Valhalla's Actor requires tiles to be accessible as local files (tile_dir mode) or a
+local tar (tile_extract mode via mmap). It cannot read tiles directly from HTTP URLs.
+A tile proxy that intercepts file reads and fetches via HTTP Range Requests would
+remove this constraint (see `docs/findings.md` section 4).
+
+### Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/healthz` | GET | Liveness probe |
+| `/readyz` | GET | Readiness probe (actor_initialized, mode) |
+| `/route` | POST | Route search (start, end, costing) |

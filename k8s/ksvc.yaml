@@ -1,0 +1,47 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: poc-cesg-route-search
+  namespace: knative-pool
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "0"
+        autoscaling.knative.dev/max-scale: "3"
+        autoscaling.knative.dev/target: "3"
+        autoscaling.knative.dev/scale-down-delay: "60s"
+    spec:
+      containerConcurrency: 3
+      timeoutSeconds: 300
+      containers:
+        - image: poc-cesg-route-search:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HOME
+              value: /tmp
+            - name: VALHALLA_TILE_EXTRACT_URL
+              value: "https://z.yuiseki.net/static/cesg/tokyo/valhalla_tiles.tar"
+            - name: VALHALLA_CONFIG_URL
+              value: "https://z.yuiseki.net/static/cesg/tokyo/valhalla.json"
+            - name: VALHALLA_MANIFEST_URL
+              value: "https://z.yuiseki.net/static/cesg/tokyo/valhalla_tiles.manifest.json"
+            - name: VALHALLA_LOCAL_DIR
+              value: "/tmp/valhalla"
+            - name: VALHALLA_LOCAL_TILE_EXTRACT
+              value: "/tmp/valhalla/valhalla_tiles.tar"
+            - name: VALHALLA_LOCAL_CONFIG
+              value: "/tmp/valhalla/valhalla.json"
+            - name: VALHALLA_ARTIFACT_MODE
+              value: "tile_extract"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+              ephemeral-storage: "2Gi"
+            limits:
+              cpu: "4"
+              memory: "4Gi"
+              ephemeral-storage: "4Gi"

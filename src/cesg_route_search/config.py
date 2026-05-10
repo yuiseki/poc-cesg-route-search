@@ -4,6 +4,33 @@ import json
 import os
 from pathlib import Path
 
+# ---------------------------------------------------------------------------
+# Environment variable names used by valhalla_actor.py
+# ---------------------------------------------------------------------------
+
+# Remote download URLs
+ENV_TILE_EXTRACT_URL = "VALHALLA_TILE_EXTRACT_URL"
+ENV_CONFIG_URL = "VALHALLA_CONFIG_URL"
+ENV_MANIFEST_URL = "VALHALLA_MANIFEST_URL"  # future use
+
+# Local working directory and paths
+ENV_LOCAL_DIR = "VALHALLA_LOCAL_DIR"               # default: /tmp/valhalla
+ENV_LOCAL_TILE_EXTRACT = "VALHALLA_LOCAL_TILE_EXTRACT"  # default: /tmp/valhalla/valhalla_tiles.tar
+ENV_LOCAL_CONFIG = "VALHALLA_LOCAL_CONFIG"         # default: /tmp/valhalla/valhalla.json
+
+# Operational mode
+ENV_ARTIFACT_MODE = "VALHALLA_ARTIFACT_MODE"       # "tile_extract" or "tile_dir"
+ENV_FALLBACK_EXTRACT = "VALHALLA_FALLBACK_EXTRACT_TO_TILE_DIR"  # "true"/"false"
+
+# Local source paths (for dev; skips download if file exists)
+ENV_LOCAL_TILE_EXTRACT_SOURCE = "VALHALLA_LOCAL_TILE_EXTRACT_SOURCE"
+ENV_LOCAL_CONFIG_SOURCE = "VALHALLA_LOCAL_CONFIG_SOURCE"
+
+# Default values
+DEFAULT_LOCAL_DIR = "/tmp/valhalla"
+DEFAULT_LOCAL_TILE_EXTRACT = "/tmp/valhalla/valhalla_tiles.tar"
+DEFAULT_LOCAL_CONFIG = "/tmp/valhalla/valhalla.json"
+
 
 def load_valhalla_config(config_path: str) -> dict:
     """Load raw valhalla.json from disk."""

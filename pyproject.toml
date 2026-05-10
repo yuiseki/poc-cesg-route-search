@@ -5,13 +5,10 @@ description = "Cloud-Native Geospatial route search PoC using precomputed Valhal
 requires-python = ">=3.12"
 dependencies = [
     "pyvalhalla>=3.7.0",
-    "requests>=2.32",
-]
-
-[project.optional-dependencies]
-server = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
+    "httpx>=0.27",
+    "requests>=2.32",
 ]
 
 [build-system]

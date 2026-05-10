@@ -143,16 +143,52 @@ bash scripts/110_build_tokyo_valhalla_tiles.sh
 
 Outputs land in `outputs/tokyo-*`. See `docs/tokyo-valhalla-pipeline.md` for details.
 
-### Local server (optional)
+### Local server
 
 ```bash
-.venv/bin/pip install -e ".[server]"
+# Install all deps (fastapi, uvicorn, httpx included in main deps)
+.venv/bin/pip install -e .
+
+# Start server (uses local Tokyo tiles via env vars)
 .venv/bin/python scripts/200_run_local_server.py
-# Then: curl -X POST http://localhost:8000/route -H 'Content-Type: application/json' \
-#   -d '{"costing":"auto","start":[139.767125,35.681236],"end":[139.700464,35.689487]}'
 ```
 
-See `docs/knative-next-step.md` for the Knative deployment design.
+### curl test
+
+```bash
+# Liveness
+curl http://localhost:8080/healthz
+
+# Readiness
+curl http://localhost:8080/readyz
+
+# Route: Tokyo Station → Shinjuku
+curl -X POST http://localhost:8080/route \
+  -H 'Content-Type: application/json' \
+  -d '{"costing":"auto","start":[139.767125,35.681236],"end":[139.700464,35.689487]}' \
+  | python3 -m json.tool
+```
+
+### Docker build and run
+
+```bash
+# Build image
+bash scripts/210_build_route_server_image.sh
+# or: docker build -f docker/Dockerfile -t poc-cesg-route-search:0.1.0 .
+
+# Run container with local tiles bind-mounted
+bash scripts/220_run_route_server_container.sh
+```
+
+### Knative deploy
+
+```bash
+# Apply ksvc (downloads tiles from object storage on cold start)
+kubectl apply -f k8s/ksvc.yaml
+```
+
+See `docs/knative-deploy.md` for cold start details, tile_extract vs tile_dir mode,
+and the future Range Request tile fetcher design.
 
 ---
 

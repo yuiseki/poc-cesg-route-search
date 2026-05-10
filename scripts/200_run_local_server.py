@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""
-200_run_local_server.py — Start the local FastAPI route search server.
-
-Requires: pip install fastapi uvicorn (or pip install -e ".[server]")
+"""Launch local FastAPI server for testing.
 
 Usage:
-    TOKYO_VALHALLA_CONFIG=data/tokyo/valhalla/valhalla.host.json \
     .venv/bin/python scripts/200_run_local_server.py
 
+Or with explicit env overrides:
+    VALHALLA_ARTIFACT_MODE=tile_dir .venv/bin/python scripts/200_run_local_server.py
+
 Then test:
-    curl -s -X POST http://localhost:8000/route \
-      -H 'Content-Type: application/json' \
-      -d '{"costing":"auto","start":[139.767125,35.681236],"end":[139.700464,35.689487]}' \
+    curl -s http://localhost:8080/healthz
+    curl -s http://localhost:8080/readyz
+    curl -s -X POST http://localhost:8080/route \\
+      -H 'Content-Type: application/json' \\
+      -d '{"costing":"auto","start":[139.767125,35.681236],"end":[139.700464,35.689487]}' \\
       | python3 -m json.tool
 """
 
@@ -19,34 +20,26 @@ import os
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).parent.parent
-DEFAULT_CONFIG = REPO_ROOT / "data" / "tokyo" / "valhalla" / "valhalla.host.json"
+repo_root = Path(__file__).parent.parent
+data_dir = repo_root / "data" / "tokyo" / "valhalla"
 
-if "TOKYO_VALHALLA_CONFIG" not in os.environ:
-    os.environ["TOKYO_VALHALLA_CONFIG"] = str(DEFAULT_CONFIG)
+os.environ.setdefault("VALHALLA_LOCAL_TILE_EXTRACT_SOURCE", str(data_dir / "valhalla_tiles.tar"))
+os.environ.setdefault("VALHALLA_LOCAL_CONFIG_SOURCE", str(data_dir / "valhalla.host.json"))
+os.environ.setdefault("VALHALLA_LOCAL_DIR", "/tmp/valhalla")
+os.environ.setdefault("VALHALLA_LOCAL_TILE_EXTRACT", "/tmp/valhalla/valhalla_tiles.tar")
+os.environ.setdefault("VALHALLA_LOCAL_CONFIG", "/tmp/valhalla/valhalla.json")
+os.environ.setdefault("VALHALLA_ARTIFACT_MODE", "tile_extract")
 
-if not Path(os.environ["TOKYO_VALHALLA_CONFIG"]).exists():
-    print(
-        f"[ERROR] Config not found: {os.environ['TOKYO_VALHALLA_CONFIG']}\n"
-        "  Run scripts/120_patch_tokyo_valhalla_config.py first.",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+sys.path.insert(0, str(repo_root / "src"))
 
 try:
     import uvicorn
 except ImportError:
     print(
         "[ERROR] uvicorn not installed.\n"
-        "  Install with: .venv/bin/pip install 'fastapi' 'uvicorn[standard]'",
+        "  Install with: .venv/bin/pip install -e .",
         file=sys.stderr,
     )
     sys.exit(1)
 
-print(f"Starting server with config: {os.environ['TOKYO_VALHALLA_CONFIG']}")
-uvicorn.run(
-    "cesg_route_search.server:app",
-    host="0.0.0.0",
-    port=8000,
-    reload=False,
-)
+uvicorn.run("cesg_route_search.app:app", host="0.0.0.0", port=8080, reload=False)
