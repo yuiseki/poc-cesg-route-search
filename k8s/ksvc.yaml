@@ -14,20 +14,20 @@ spec:
     spec:
       containerConcurrency: 3
       timeoutSeconds: 300
+      nodeSelector:
+        yuiseki.net/compute: "true"
       containers:
-        - image: poc-cesg-route-search:0.1.0
-          imagePullPolicy: IfNotPresent
+        - image: 192.168.0.90:5000/poc-cesg-route-search:0.1.0
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
             - name: HOME
               value: /tmp
             - name: VALHALLA_TILE_EXTRACT_URL
-              value: "https://z.yuiseki.net/static/cesg/tokyo/valhalla_tiles.tar"
+              value: "http://cng-storage-http.cng-storage.svc.cluster.local/cesg-route-search/tokyo/valhalla_tiles.tar"
             - name: VALHALLA_CONFIG_URL
-              value: "https://z.yuiseki.net/static/cesg/tokyo/valhalla.json"
-            - name: VALHALLA_MANIFEST_URL
-              value: "https://z.yuiseki.net/static/cesg/tokyo/valhalla_tiles.manifest.json"
+              value: "http://cng-storage-http.cng-storage.svc.cluster.local/cesg-route-search/tokyo/valhalla.json"
             - name: VALHALLA_LOCAL_DIR
               value: "/tmp/valhalla"
             - name: VALHALLA_LOCAL_TILE_EXTRACT
