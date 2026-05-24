@@ -105,7 +105,12 @@
   </div>
 
   <script>
-    const ROUTE_API_URL = new URLSearchParams(location.search).get('api') || "https://poc-cesg-route-search.yuiseki.com/route";
+    function defaultApiUrl(hostname) {
+      if (hostname === 'yuiseki.github.io') return 'https://poc-cesg-route-search.yuiseki.com/route';
+      if (hostname === 'www.yuiseki.dev')   return 'https://poc-cesg-route-search.yuiseki.dev/route';
+      return 'https://poc-cesg-route-search.yuiseki.dev/route';
+    }
+    const ROUTE_API_URL = new URLSearchParams(location.search).get('api') || defaultApiUrl(location.hostname);
 
     const DEFAULT_START = [139.701238, 35.658034]; // Shibuya Station
     const DEFAULT_END   = [139.700464, 35.689487]; // Shinjuku Station
