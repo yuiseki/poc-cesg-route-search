@@ -55,9 +55,35 @@ class RouteRequest(BaseModel):
     end: list[float]    # [lon, lat]
 
 
+def _health_payload() -> dict:
+    return {
+        "ok": True,
+        "status": "ok",
+        "service": "poc-cesg-route-search",
+    }
+
+
+@app.get("/")
+def root():
+    return {
+        **_health_payload(),
+        "endpoints": {
+            "health": "/health",
+            "healthz": "/healthz",
+            "readyz": "/readyz",
+            "route": "/route",
+        },
+    }
+
+
+@app.get("/health")
+def health():
+    return _health_payload()
+
+
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "service": "poc-cesg-route-search"}
+    return _health_payload()
 
 
 @app.get("/readyz")

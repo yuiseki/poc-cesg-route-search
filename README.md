@@ -28,6 +28,10 @@ Cold start downloads 819 MB tar from `https://z.yuiseki.net/static/cesg/tokyo/va
 ## API usage
 
 ```bash
+# Service info / health
+curl -sS https://poc-cesg-route-search.yuiseki.com/
+curl -sS https://poc-cesg-route-search.yuiseki.com/health
+
 # Liveness probe
 curl -sS https://poc-cesg-route-search.yuiseki.com/healthz
 
