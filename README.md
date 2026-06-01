@@ -13,6 +13,14 @@ Default route: Shibuya Station → Shinjuku Station.
 
 ## Knative deploy
 
+### `z` cluster (`.com`, local image import)
+
+```bash
+kubectl apply -f k8s/ksvc-z.yaml
+```
+
+### `pi5` cluster (`.dev`, LAN registry)
+
 ```bash
 # Apply ksvc (downloads valhalla_tiles.tar from object storage on cold start)
 kubectl apply -f k8s/ksvc.yaml
