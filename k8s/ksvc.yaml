@@ -17,7 +17,7 @@ spec:
       nodeSelector:
         yuiseki.net/compute: "true"
       containers:
-        - image: 192.168.0.90:5000/poc-cesg-route-search:0.1.1
+        - image: 192.168.0.90:5000/poc-cesg-route-search:0.1.2
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

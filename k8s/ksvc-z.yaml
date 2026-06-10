@@ -15,7 +15,7 @@ spec:
       containerConcurrency: 3
       timeoutSeconds: 300
       containers:
-        - image: poc-cesg-route-search:0.1.1
+        - image: poc-cesg-route-search:0.1.2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

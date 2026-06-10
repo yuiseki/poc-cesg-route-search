@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from .geojson import decode_polyline6
@@ -63,6 +64,35 @@ def _health_payload() -> dict:
     }
 
 
+def _actor_ready() -> bool:
+    from .valhalla_actor import _actor
+
+    return _actor is not None
+
+
+def _healthz_payload() -> tuple[dict, int]:
+    actor_ready = _actor_ready()
+    if actor_ready:
+        return (
+            {
+                **_health_payload(),
+                "actor_initialized": True,
+                "artifact_mode": get_artifact_mode(),
+            },
+            200,
+        )
+    return (
+        {
+            "ok": False,
+            "status": "ng",
+            "service": "poc-cesg-route-search",
+            "actor_initialized": False,
+            "artifact_mode": "not_initialized",
+        },
+        503,
+    )
+
+
 @app.get("/")
 def root():
     return {
@@ -83,19 +113,21 @@ def health():
 
 @app.get("/healthz")
 def healthz():
-    return _health_payload()
+    payload, status_code = _healthz_payload()
+    return JSONResponse(payload, status_code=status_code)
 
 
 @app.get("/readyz")
 def readyz():
-    from .valhalla_actor import _actor
-
-    initialized = _actor is not None
-    return {
-        "ready": initialized,
-        "actor_initialized": initialized,
-        "mode": get_artifact_mode() if initialized else "not_initialized",
-    }
+    initialized = _actor_ready()
+    return JSONResponse(
+        {
+            "ready": initialized,
+            "actor_initialized": initialized,
+            "mode": get_artifact_mode() if initialized else "not_initialized",
+        },
+        status_code=200 if initialized else 503,
+    )
 
 
 @app.post("/route")
